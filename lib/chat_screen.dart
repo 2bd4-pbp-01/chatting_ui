@@ -69,7 +69,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('Projects', style: TextStyle(color: Colors.white)),
+                        const Text('Groups', style: TextStyle(color: Colors.white)),
                         const SizedBox(width: 4),
                         Container(
                           padding: const EdgeInsets.all(4),

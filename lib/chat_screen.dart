@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'departement_settings.dart';
+import 'profile_settings.dart';
+import 'creategroup.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -43,6 +46,7 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
+          automaticallyImplyLeading: false, // Menghapus tombol back
           backgroundColor: const Color(0xFF2C3E50),
           title: const Text(
             'IT Department',
@@ -53,9 +57,68 @@ class _ChatScreenState extends State<ChatScreen> {
               icon: const Icon(Icons.search, color: Colors.white),
               onPressed: () {},
             ),
-            IconButton(
+            PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: Colors.white),
-              onPressed: () {},
+              onSelected: (String choice) {
+                switch (choice) {
+                  case 'Department Settings':
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DepartmentSettingsScreen(),
+                      ),
+                    );
+                    break;
+                  case 'Profile Settings':
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ProfileSettingsScreen(),
+                      ),
+                    );
+                    break;
+                  case 'Create Group':
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CreateGroupScreen(),
+                      ),
+                    );
+                    break;
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'Department Settings',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.corporate_fare, color: Colors.black87),
+                      const SizedBox(width: 10),
+                      const Text('Department Settings'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'Profile Settings',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.person, color: Colors.black87),
+                      const SizedBox(width: 10),
+                      const Text('Profile Settings'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'Create Group',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.group_add, color: Colors.black87),
+                      const SizedBox(width: 10),
+                      const Text('Create Group'),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
           bottom: PreferredSize(
@@ -69,7 +132,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('Groups', style: TextStyle(color: Colors.white)),
+                        const Text('Groups',
+                            style: TextStyle(color: Colors.white)),
                         const SizedBox(width: 4),
                         Container(
                           padding: const EdgeInsets.all(4),
@@ -154,7 +218,7 @@ class ProjectListTile extends StatelessWidget {
       leading: CircleAvatar(
         radius: 25,
         backgroundColor: Colors.grey[300],
-        child: const Icon(Icons.person),  // Placeholder for actual image
+        child: const Icon(Icons.person), // Placeholder for actual image
       ),
       title: Text(
         project.title,

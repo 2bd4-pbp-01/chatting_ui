@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:chatting_ui/signup_screen.dart';
+import 'signup_screen.dart';
+import 'chat_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -204,7 +205,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: ElevatedButton(
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
-                          // Handle login
+                          // Navigasi ke ChatScreen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const ChatScreen(), // Pastikan menggunakan const jika konstruktor ChatScreen adalah const
+                            ),
+                          );
                         }
                       },
                       style: ElevatedButton.styleFrom(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:chatting_ui/edit_profile_screen.dart';
-import 'package:chatting_ui/landing_screen.dart';
+import 'edit_profile_screen.dart';
+import 'landing_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});

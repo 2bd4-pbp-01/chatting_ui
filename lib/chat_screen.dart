@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'departement_settings.dart';
-import 'profile_settings.dart';
+import 'profile_screen.dart';
 import 'creategroup.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -69,11 +69,11 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     );
                     break;
-                  case 'Profile Settings':
+                  case 'Profile':
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const ProfileSettingsScreen(),
+                        builder: (context) => const ProfileScreen(),
                       ),
                     );
                     break;
@@ -99,12 +99,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 PopupMenuItem<String>(
-                  value: 'Profile Settings',
+                  value: 'Profile',
                   child: Row(
                     children: [
                       const Icon(Icons.person, color: Colors.black87),
                       const SizedBox(width: 10),
-                      const Text('Profile Settings'),
+                      const Text('Profile'),
                     ],
                   ),
                 ),

@@ -12,7 +12,9 @@ class EditProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Editing Profile'),
+        backgroundColor: const Color(0xFF2C3E50),
+        iconTheme: IconThemeData(color: Colors.white),
+        title: Text('Editing Profile', style: TextStyle(color: Colors.white)),
         centerTitle: true,
       ),
       body: Stack(
@@ -41,14 +43,14 @@ class EditProfileScreen extends StatelessWidget {
                 Text(
                   '$name',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 22,
                   ),
                 ),
                 SizedBox(height: 5),
                 Text(
                   'skibidi@sigma.com',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     color: Colors.grey,
                   ),
                 ),
@@ -74,7 +76,7 @@ class EditProfileScreen extends StatelessWidget {
                       Text(
                         'Name',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 22,
                        ),
                       ),
                       SizedBox(height: 10),
@@ -87,10 +89,10 @@ class EditProfileScreen extends StatelessWidget {
                           onChanged: (value) {
                           updatedName = value;
                           },
-                          style: TextStyle(fontSize: 12, color: Colors.black),
+                          style: TextStyle(fontSize: 16, color: Colors.black),
                           decoration: InputDecoration(
                             hintText: 'Enter your name',
-                            hintStyle: TextStyle(fontSize: 12, color: Colors.grey),
+                            hintStyle: TextStyle(fontSize: 16, color: Colors.grey),
                             border: InputBorder.none,
                             contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           ),
@@ -124,7 +126,6 @@ class EditProfileScreen extends StatelessWidget {
                 'Save Settings',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 14,
                   fontFamily: 'Helvetica Rounded',
                 ),
               ),

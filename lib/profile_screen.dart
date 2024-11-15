@@ -17,13 +17,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: const Color(0xFF2C3E50),
+        iconTheme: IconThemeData(color: Colors.white),
   leading: IconButton(
     icon: Icon(Icons.arrow_back),
     onPressed: () {
       Navigator.pop(context);
     },
   ),
-  title: Text('Profile'),
+  title: Text('Profile', style: TextStyle(color: Colors.white)), 
   centerTitle: true,
   actions: <Widget>[
     PopupMenuButton<String>(
@@ -194,14 +196,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Text(
               '$name',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 22,
               ),
             ),
             SizedBox(height: 5),
             Text(
               'skibidi@sigma.com',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 14,
                 color: Colors.grey,
               ),
             ),
@@ -227,7 +229,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Text(
                     'Department Name',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 22,
                    ),
                   ),
                   SizedBox(height: 10),
@@ -237,7 +239,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         'Company Owner',
                         style: TextStyle(
                           color: Color(0xFF23272A),
-                          fontSize: 12,
                         ),
                       ),
                     ),  
@@ -245,7 +246,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Text(
                     'Your Role',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 22,
                     ),
                   ),
                   SizedBox(height: 10),
@@ -255,7 +256,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Owner',
                       style: TextStyle(
                         color: Color(0xFF23272A),
-                        fontSize: 12,
                       ),
                     ),
                   ),

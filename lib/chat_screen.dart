@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'departement_settings.dart';
 import 'profile_screen.dart';
 import 'creategroup.dart';
+import 'in_group_chat_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -13,7 +14,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final List<ProjectItem> projects = [
     ProjectItem(
-      title: 'Project CorpsChat',
+      title: 'Project CorpaChat',
       subtitle: "Let's Meet",
       time: '11:48',
       notificationCount: 123,
@@ -263,6 +264,14 @@ class ProjectListTile extends StatelessWidget {
             ),
         ],
       ),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => InGroupChatScreen(groupName: project.title),
+          ),
+        );
+      },
     );
   }
 }

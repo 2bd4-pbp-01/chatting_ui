@@ -3,8 +3,9 @@ import 'group_settings.dart';
 
 class InGroupChatScreen extends StatefulWidget {
   final String groupName;
+  final int groupId;
 
-  const InGroupChatScreen({super.key, required this.groupName});
+  const InGroupChatScreen({super.key, required this.groupName, required this.groupId});
 
   @override
   State<InGroupChatScreen> createState() => _InGroupChatScreenState();
@@ -134,10 +135,10 @@ class _InGroupChatScreenState extends State<InGroupChatScreen> {
             icon: const Icon(Icons.more_vert, color: Colors.black),
             onSelected: (value) {
               switch (value) {
-                case 'Group Settings': // Sesuaikan value di sini
+                case 'Group Settings':
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const GroupSettings()),
+                    MaterialPageRoute(builder: (context) => GroupSettings(groupId: widget.groupId)),
                   );
                   break;
                 case 'leave_group':

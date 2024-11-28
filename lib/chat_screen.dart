@@ -221,11 +221,10 @@ class GroupListTile extends StatelessWidget {
       ),
       subtitle: Text('Group ID: ${group.idGroup}'),
       onTap: () {
-        // Navigasi ke layar obrolan grup
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => InGroupChatScreen(groupName: group.name),
+            builder: (context) => InGroupChatScreen(groupName: group.name, groupId: group.idGroup),
           ),
         );
       },

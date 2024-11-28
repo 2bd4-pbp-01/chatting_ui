@@ -1,8 +1,25 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:chatting_ui/services/auth_services.dart';
+import 'creategroup.dart';
 import 'departement_settings.dart';
 import 'profile_screen.dart';
-import 'creategroup.dart';
 import 'in_group_chat_screen.dart';
+
+// Model untuk grup
+class GroupItem {
+  final int idGroup;
+  final String name;
+
+  GroupItem({required this.idGroup, required this.name});
+
+  factory GroupItem.fromJson(Map<String, dynamic> json) {
+    return GroupItem(
+      idGroup: json['id_group'] ?? 0,
+      name: json['name'] ?? '',
+    );
+  }
+}
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -12,33 +29,24 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final List<ProjectItem> projects = [
-    ProjectItem(
-      title: 'Project CorpaChat',
-      subtitle: "Let's Meet",
-      time: '11:48',
-      notificationCount: 123,
-      imageUrl: 'placeholder_url',
-    ),
-    ProjectItem(
-      title: 'Project Gacor',
-      subtitle: "Yes, That's correct!",
-      time: '09:21',
-      imageUrl: 'placeholder_url',
-    ),
-    ProjectItem(
-      title: 'Project MEme',
-      subtitle: "Yes, That's correct!",
-      time: '09:21',
-      imageUrl: 'placeholder_url',
-    ),
-    ProjectItem(
-      title: 'Project META',
-      subtitle: "Yes, That's correct!",
-      time: '09:21',
-      imageUrl: 'placeholder_url',
-    ),
-  ];
+  late Future<List<GroupItem>> groupList;
+
+  // Fungsi untuk mengambil data grup dari AuthService
+  Future<List<GroupItem>> fetchGroups() async {
+    try {
+      final List groups = await AuthService.getGroups();
+      // Parsing data ke dalam model GroupItem
+      return groups.map((json) => GroupItem.fromJson(json)).toList();
+    } catch (e) {
+      throw Exception('Failed to load groups: $e');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    groupList = fetchGroups(); // Memanggil fungsi untuk mengambil data grup
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +55,7 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          automaticallyImplyLeading: false, // Menghapus tombol back
+          automaticallyImplyLeading: false,
           backgroundColor: const Color(0xFF2C3E50),
           title: const Text(
             'IT Department',
@@ -82,7 +90,13 @@ class _ChatScreenState extends State<ChatScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => CreateGroupScreen(),
+                        builder: (context) => CreateGroupScreen(
+                          refreshGroups: () {
+                            setState(() {
+                              groupList = fetchGroups(); // Memuat ulang grup
+                            });
+                          },
+                        ),
                       ),
                     );
                     break;
@@ -133,8 +147,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('Groups',
-                            style: TextStyle(color: Colors.white)),
+                        const Text('Groups', style: TextStyle(color: Colors.white)),
                         const SizedBox(width: 4),
                         Container(
                           padding: const EdgeInsets.all(4),
@@ -144,40 +157,44 @@ class _ChatScreenState extends State<ChatScreen> {
                           ),
                           child: const Text(
                             '1',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
+                            style: TextStyle(color: Colors.white, fontSize: 12),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Tab(
-                    child: Text('Chats', style: TextStyle(color: Colors.white)),
-                  ),
-                  const Tab(
-                    child: Text('Notes', style: TextStyle(color: Colors.white)),
-                  ),
+                  const Tab(child: Text('Chats', style: TextStyle(color: Colors.white))),
+                  const Tab(child: Text('Notes', style: TextStyle(color: Colors.white))),
                 ],
               ),
             ),
           ),
         ),
-        body: TabBarView(
-          children: [
-            // Projects Tab
-            ListView.builder(
-              itemCount: projects.length,
-              itemBuilder: (context, index) {
-                return ProjectListTile(project: projects[index]);
-              },
-            ),
-            // Chats Tab
-            const Center(child: Text('Chats Content')),
-            // Notes Tab
-            const Center(child: Text('Notes Content')),
-          ],
+        body: FutureBuilder<List<GroupItem>>(
+          future: groupList,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            } else if (snapshot.hasData) {
+              final groups = snapshot.data!;
+              return TabBarView(
+                children: [
+                  ListView.builder(
+                    itemCount: groups.length,
+                    itemBuilder: (context, index) {
+                      return GroupListTile(group: groups[index]);
+                    },
+                  ),
+                  const Center(child: Text('Chats Content')),
+                  const Center(child: Text('Notes Content')),
+                ],
+              );
+            } else {
+              return const Center(child: Text('No groups found.'));
+            }
+          },
         ),
         floatingActionButton: FloatingActionButton(
           backgroundColor: const Color(0xFF2C3E50),
@@ -189,86 +206,26 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-class ProjectItem {
-  final String title;
-  final String subtitle;
-  final String time;
-  final int? notificationCount;
-  final String imageUrl;
 
-  ProjectItem({
-    required this.title,
-    required this.subtitle,
-    required this.time,
-    this.notificationCount,
-    required this.imageUrl,
-  });
-}
+class GroupListTile extends StatelessWidget {
+  final GroupItem group;
 
-class ProjectListTile extends StatelessWidget {
-  final ProjectItem project;
-
-  const ProjectListTile({
-    super.key,
-    required this.project,
-  });
+  const GroupListTile({Key? key, required this.group}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: CircleAvatar(
-        radius: 25,
-        backgroundColor: Colors.grey[300],
-        child: const Icon(Icons.person), // Placeholder for actual image
-      ),
       title: Text(
-        project.title,
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
+        group.name,
+        style: const TextStyle(fontWeight: FontWeight.bold),
       ),
-      subtitle: Text(
-        project.subtitle,
-        style: const TextStyle(
-          color: Colors.grey,
-          fontSize: 14,
-        ),
-      ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            project.time,
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 12,
-            ),
-          ),
-          if (project.notificationCount != null)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                borderRadius: BorderRadius.all(Radius.circular(12)),
-              ),
-              child: Text(
-                project.notificationCount.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-        ],
-      ),
+      subtitle: Text('Group ID: ${group.idGroup}'),
       onTap: () {
+        // Navigasi ke layar obrolan grup
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => InGroupChatScreen(groupName: project.title),
+            builder: (context) => InGroupChatScreen(groupName: group.name),
           ),
         );
       },

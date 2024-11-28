@@ -1,119 +1,125 @@
 import 'package:flutter/material.dart';
+import 'package:chatting_ui/services/auth_services.dart';
+import 'package:chatting_ui/chat_screen.dart';
 
-class CreateGroupScreen extends StatelessWidget {
+class CreateGroupScreen extends StatefulWidget {
+  final Function refreshGroups;
+
+  const CreateGroupScreen({super.key, required this.refreshGroups});
+
+  @override
+  _CreateGroupScreenState createState() => _CreateGroupScreenState();
+}
+
+class _CreateGroupScreenState extends State<CreateGroupScreen> {
+  final TextEditingController _groupNameController = TextEditingController();
+  bool _isLoading = false;
+
+  Future<void> createGroup() async {
+    final groupName = _groupNameController.text.trim();
+
+    if (groupName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Group name cannot be empty!')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Kirim permintaan untuk membuat grup
+      final result = await AuthService.createGroup(
+        groupName: groupName,
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      print('Create Group Result: $result'); // Debugging
+
+      if (result['success']) {
+        // Panggil fungsi refresh groups yang diteruskan dari ChatScreen
+        widget.refreshGroups();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Group created successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Kembali ke layar sebelumnya
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to create group'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error in createGroup: $e'); // Debugging
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error creating group: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _groupNameController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color(0xFF2C3E50),
+        backgroundColor: const Color(0xFF2C3E50),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Create Group', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Create Group', style: TextStyle(color: Colors.white)),
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Group Info Section
-              Text(
+              const Text(
                 'Group Information',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 16),
-
-              // Group Photo
-              Center(
-                child: Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.grey[300],
-                      child:
-                          Icon(Icons.group, size: 50, color: Colors.grey[600]),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _groupNameController,
+                decoration: const InputDecoration(labelText: 'Group Name'),
+              ),
+              const SizedBox(height: 32),
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: createGroup,
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF2C3E50)),
+                      child: const Text('Create Group'),
                     ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Color(0xFF2C3E50),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 24),
-
-              // Group Name Field
-              TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'Group Name',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.group),
-                ),
-              ),
-              SizedBox(height: 16),
-
-              // Group Description Field
-              TextFormField(
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: 'Group Description',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.description),
-                ),
-              ),
-              SizedBox(height: 24),
-
-              // Add Members Section
-              Text(
-                'Add Members',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 16),
-
-              // Member List
-              ListView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                itemCount: 4, // Replace with actual member count
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundImage: AssetImage('assets/images/avatar1.png'),
-                    ),
-                    title: Text('John Doe'),
-                    trailing: Icon(Icons.close),
-                  );
-                },
-              ),
-              SizedBox(height: 24),
-
-              // Create Group Button
-              ElevatedButton(
-                onPressed: () {
-                  // Handle create group logic here
-                },
-                child: Text('Create Group'),
-              ),
             ],
           ),
         ),

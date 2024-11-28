@@ -1,9 +1,12 @@
+import 'dart:convert';
+
+import 'package:chatting_ui/services/auth_services.dart';
 import 'package:chatting_ui/services/profile_services.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'edit_profile_screen.dart';
 import 'landing_screen.dart';
-
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -13,9 +16,11 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  String name = "Boss Skibidi";
-  String email = "skibidi@sigma.com";
-  String role = "Owner";
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+
+  String? name;
+  String? email;
+  String? role;
   bool isLoading = true;
 
   final ProfileServices _profileServices = ProfileServices();
@@ -23,49 +28,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadProfileData();
+    _loadUserData();
   }
 
-  Future<void> _loadProfileData() async {
+  Future<void> _loadUserData() async {
     try {
-      final token = await _profileServices.getToken();
-      if (token == null) {
-        throw Exception('Token tidak ditemukan.');
+      final userDataJson = await _storage.read(key: 'user_data');
+      if (userDataJson != null) {
+        final userData = jsonDecode(userDataJson);
+        setState(() {
+          name = userData['username'] ?? 'Unknown';
+          email = userData['email'] ?? 'Unknown';
+          role = userData['tipe_user'] ?? 'Unknown';
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          name = 'Unknown';
+          email = 'Unknown';
+          role = 'Unknown';
+          isLoading = false;
+        });
       }
-
-      final profileData = await _profileServices.fetchProfile(token);
-
-      setState(() {
-        name = profileData['username'];
-        email = profileData['email'];
-        role = profileData['tipe_user'];
-        isLoading = false;
-      });
     } catch (e) {
       setState(() {
+        name = 'Error';
+        email = 'Error';
+        role = 'Error';
         isLoading = false;
       });
-      _showErrorDialog('Gagal memuat profil. Pastikan Anda terhubung ke jaringan.');
     }
   }
 
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Error'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,13 +70,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text('Profile', style: TextStyle(color: Colors.white)),
         centerTitle: true,
-        actions: <Widget>[
+        actions: [
           PopupMenuButton<String>(
             onSelected: (String result) {
               switch (result) {
@@ -91,8 +83,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => EditProfileScreen(
-                        name: name,
-                        email: email,
+                        name: name ?? '',
+                        email: email ?? '',
                         onSave: (updatedName) {
                           setState(() {
                             name = updatedName;
@@ -103,82 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   );
                   break;
                 case 'Log Out':
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        content: const SingleChildScrollView(
-                          child: Center(
-                            child: Text.rich(
-                              TextSpan(
-                                text: '\nApakah kamu ingin ',
-                                style: TextStyle(fontSize: 18),
-                                children: <TextSpan>[
-                                  TextSpan(
-                                    text: 'log out',
-                                    style: TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  TextSpan(text: '?'),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        actionsAlignment: MainAxisAlignment.spaceAround,
-                        actions: <Widget>[
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop(); // Tutup dialog
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (context) => const LandingScreen()),
-                              );
-                            },
-                            style: TextButton.styleFrom(
-                              backgroundColor: const Color(0xFF606D75),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                SizedBox(width: 9),
-                                Icon(Icons.check, color: Colors.green),
-                                SizedBox(width: 8),
-                                Text('Ya'),
-                                SizedBox(width: 9),
-                              ],
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop(); // Tutup dialog
-                            },
-                            style: TextButton.styleFrom(
-                              backgroundColor: const Color(0xFF606D75),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(Icons.close, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Tidak'),
-                              ],
-                            ),
-                          ),
-                        ],
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8.0)),
-                        ),
-                      );
-                    },
-                  );
+                  _showLogoutDialog(context);
                   break;
               }
             },
@@ -206,7 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           : Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
+          children: [
             const SizedBox(height: 20),
             Container(
               width: 80,
@@ -223,12 +140,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 10),
             Text(
-              name,
+              name ?? 'Unknown',
               style: const TextStyle(fontSize: 22),
             ),
             const SizedBox(height: 5),
             Text(
-              email,
+              email ?? 'Unknown',
               style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 50),
@@ -249,21 +166,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
+                children: [
                   const Text(
                     'Your Role',
-                    style: TextStyle(
-                      fontSize: 22,
-                    ),
+                    style: TextStyle(fontSize: 22),
                   ),
                   const SizedBox(height: 10),
                   Padding(
                     padding: const EdgeInsets.only(left: 5.0),
                     child: Text(
-                      role,
-                      style: const TextStyle(
-                        color: Color(0xFF23272A),
-                      ),
+                      role ?? 'Unknown',
+                      style: const TextStyle(color: Color(0xFF23272A)),
                     ),
                   ),
                 ],
@@ -272,6 +185,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: const SingleChildScrollView(
+            child: Center(
+              child: Text.rich(
+                TextSpan(
+                  text: '\nApakah kamu ingin ',
+                  style: TextStyle(fontSize: 18),
+                  children: <TextSpan>[
+                    TextSpan(
+                      text: 'log out',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    TextSpan(text: '?'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.spaceAround,
+          actions: <Widget>[
+            TextButton(
+              onPressed: () async {
+                // Navigator.of(context).pop();
+                await AuthService.logout();
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LandingScreen()),
+                      (route) => false,
+                );
+              },
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFF606D75),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  SizedBox(width: 9),
+                  Icon(Icons.check, color: Colors.green),
+                  SizedBox(width: 8),
+                  Text('Ya'),
+                  SizedBox(width: 9),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Tutup dialog
+              },
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFF606D75),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.close, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Tidak'),
+                ],
+              ),
+            ),
+          ],
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(8.0)),
+          ),
+        );
+      },
     );
   }
 }

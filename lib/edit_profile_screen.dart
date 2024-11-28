@@ -4,7 +4,7 @@ class EditProfileScreen extends StatelessWidget {
   final String name;
   final Function(String) onSave;
 
-  EditProfileScreen({required this.name, required this.onSave});
+  EditProfileScreen({required this.name, required this.onSave, required String email});
 
   @override
   Widget build(BuildContext context) {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:chatting_ui/services/group_services.dart';
 import 'package:flutter/material.dart';
 import 'package:chatting_ui/services/auth_services.dart';
 import 'creategroup.dart';
@@ -34,7 +35,7 @@ class _ChatScreenState extends State<ChatScreen> {
   // Fungsi untuk mengambil data grup dari AuthService
   Future<List<GroupItem>> fetchGroups() async {
     try {
-      final List groups = await AuthService.getGroups();
+      final List groups = await GroupServices.getGroups();
       // Parsing data ke dalam model GroupItem
       return groups.map((json) => GroupItem.fromJson(json)).toList();
     } catch (e) {

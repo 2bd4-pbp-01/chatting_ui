@@ -1,11 +1,12 @@
+import 'package:chatting_ui/helper/constant_app.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthService {
-  static const String _baseUrl = 'https://api.corpachat.zrie.me';
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
+  // Register User
   static Future<Map<String, dynamic>> register({
     required String username,
     required String email,
@@ -14,13 +15,13 @@ class AuthService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/register'),
+        Uri.parse(AppConstants.REGISTER),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'username': username,
           'email': email,
           'password': password,
-          'confPassword': confPassword
+          'confPassword': confPassword,
         }),
       );
 
@@ -28,21 +29,23 @@ class AuthService {
 
       if (response.statusCode == 201) {
         await _storage.write(
-            key: 'auth_token', value: responseData['data']['token']);
+          key: 'auth_token',
+          value: responseData['data']['token'],
+        );
         return {
           'success': true,
-          'message': responseData['message'] ?? 'Registration successful'
+          'message': responseData['message'] ?? 'Registration successful',
         };
       } else {
         return {
           'success': false,
-          'message': responseData['message'] ?? 'Registration failed'
+          'message': responseData['message'] ?? 'Registration failed',
         };
       }
     } catch (e) {
       return {
         'success': false,
-        'message': 'An error occurred: ${e.toString()}'
+        'message': 'An error occurred: ${e.toString()}',
       };
     }
   }
@@ -52,8 +55,9 @@ class AuthService {
     required String password,
   }) async {
     try {
+      // Login untuk mendapatkan token
       final response = await http.post(
-        Uri.parse('$_baseUrl/login'),
+        Uri.parse(AppConstants.LOGIN),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
@@ -61,50 +65,85 @@ class AuthService {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        await _storage.write(
-            key: 'auth_token', value: responseData['data']['token']);
-        return {
-          'success': true,
-          'message': responseData['message'] ?? 'Login successful'
-        };
+        final token = responseData['data']['token'];
+
+        // Simpan token ke storage
+        await _storage.write(key: 'auth_token', value: token);
+
+        // Ambil detail user dari endpoint /me
+        final userResponse = await http.get(
+          Uri.parse(AppConstants.PROFILE),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+
+        if (userResponse.statusCode == 200) {
+          final userData = jsonDecode(userResponse.body)['data'];
+
+          // Simpan detail user ke storage (simpan per atribut)
+          await _storage.write(key: 'username', value: userData['username']);
+          await _storage.write(key: 'email', value: userData['email']);
+          await _storage.write(key: 'tipe_user', value: userData['tipe_user']);
+
+          print("token : $token");
+          print('User data saved: $userData');
+
+          return {
+            'success': true,
+            'message': responseData['message'] ?? 'Login successful',
+            'userData': userData,
+          };
+        } else {
+          return {
+            'success': false,
+            'message': 'Failed to fetch user details',
+          };
+        }
       } else {
         return {
           'success': false,
-          'message': responseData['message'] ?? 'Login failed'
+          'message': responseData['message'] ?? 'Login failed',
         };
       }
     } catch (e) {
       return {
         'success': false,
-        'message': 'An error occurred: ${e.toString()}'
+        'message': 'An error occurred: ${e.toString()}',
       };
     }
   }
 
+
+  // Logout User
   static Future<void> logout() async {
     try {
       final token = await _storage.read(key: 'auth_token');
+      //print data in secure storage
+      print(await _storage.readAll());
       await http.delete(
-        Uri.parse('$_baseUrl/logout'),
+        Uri.parse(AppConstants.LOGOUT),
         headers: {
           'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
       );
-      await _storage.delete(key: 'auth_token');
+      await _storage.deleteAll();
     } catch (e) {
       print('Logout error: $e');
     }
   }
 
+  // Get User Profile
   static Future<Map<String, dynamic>> getUserProfile() async {
     try {
       final token = await _storage.read(key: 'auth_token');
       final response = await http.get(
-        Uri.parse('$_baseUrl/me'),
+        Uri.parse(AppConstants.PROFILE),
         headers: {
           'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
       );
 
@@ -115,97 +154,14 @@ class AuthService {
       } else {
         return {
           'success': false,
-          'message': responseData['message'] ?? 'Failed to fetch user profile'
+          'message': responseData['message'] ?? 'Failed to fetch user profile',
         };
       }
     } catch (e) {
       return {
         'success': false,
-        'message': 'An error occurred: ${e.toString()}'
+        'message': 'An error occurred: ${e.toString()}',
       };
     }
   }
-
-  static Future<Map<String, dynamic>> createGroup({
-      required String groupName,
-    }) async {
-      try {
-        final token = await _storage.read(key: 'auth_token');
-        
-        // Pastikan token tidak null
-        if (token == null) {
-          return {
-            'success': false,
-            'message': 'Authentication token is missing'
-          };
-        }
-
-        // Cetak informasi debugging
-        print('Token: $token');
-        print('Group Name: $groupName');
-
-        final response = await http.post(
-          Uri.parse('$_baseUrl/groups'),
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json',
-          },
-          body: json.encode({
-            'groupName': groupName  // Sesuaikan dengan key yang digunakan API
-          }),
-        );
-
-        print('Response status code: ${response.statusCode}');
-        print('Response body: ${response.body}');
-
-        final responseData = json.decode(response.body);
-
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          return {
-            'success': true,
-            'message': responseData['message'] ?? 'Group created successfully',
-            'data': responseData['data'],
-          };
-        } else {
-          return {
-            'success': false,
-            'message': responseData['message'] ?? 'Failed to create group',
-          };
-        }
-      } catch (e) {
-        print('Error creating group: $e');
-        return {
-          'success': false,
-          'message': 'An error occurred: ${e.toString()}'
-        };
-      }
-    }
-
-
-    static Future<List<dynamic>> getGroups() async {
-    try {
-      final token = await _storage.read(key: 'auth_token');
-      final response = await http.get(
-        Uri.parse('$_baseUrl/groups'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final decodedResponse = json.decode(response.body);
-        if (decodedResponse is Map<String, dynamic> && decodedResponse.containsKey('data')) {
-          return decodedResponse['data'] as List<dynamic>;
-        } else {
-          throw Exception('Unexpected API response structure');
-        }
-      } else {
-        throw Exception('Failed to load groups: ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('Failed to fetch groups: ${e.toString()}');
-    }
-  }
-
 }

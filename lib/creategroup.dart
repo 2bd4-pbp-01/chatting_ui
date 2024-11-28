@@ -1,3 +1,4 @@
+import 'package:chatting_ui/services/group_services.dart';
 import 'package:flutter/material.dart';
 import 'package:chatting_ui/services/auth_services.dart';
 import 'package:chatting_ui/chat_screen.dart';
@@ -31,7 +32,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
     try {
       // Kirim permintaan untuk membuat grup
-      final result = await AuthService.createGroup(
+      final result = await GroupServices.createGroup(
         groupName: groupName,
       );
 

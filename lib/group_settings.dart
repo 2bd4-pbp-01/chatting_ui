@@ -262,7 +262,7 @@ class _GroupSettingsState extends State<GroupSettings> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               children: <Widget>[
-                SizedBox(height: 20),
+                SizedBox(height: 70),
                 Container(
                   width: 80,
                   height: 80,
@@ -283,11 +283,11 @@ class _GroupSettingsState extends State<GroupSettings> {
                     fontSize: 22,
                   ),
                 ),
-                SizedBox(height: 100),
+                SizedBox(height:50),
                 Container(
                   padding: EdgeInsets.all(16),
                   width: MediaQuery.of(context).size.width * 0.75,
-                  height: 300,
+                  height: 400,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
@@ -346,7 +346,7 @@ class _GroupSettingsState extends State<GroupSettings> {
                         ),
                       ),
                       SizedBox(height: 10),
-                      Row(
+                      Column(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           ElevatedButton(

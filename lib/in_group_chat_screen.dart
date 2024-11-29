@@ -1,8 +1,9 @@
-import 'dart:convert'; // Import to decode JSON
+import 'dart:convert';
 import 'package:chatting_ui/helper/constant_app.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart'; // Import for date formatting
+import 'package:intl/intl.dart';
 import 'group_settings.dart';
 
 class InGroupChatScreen extends StatefulWidget {
@@ -17,30 +18,41 @@ class InGroupChatScreen extends StatefulWidget {
 
 class _InGroupChatScreenState extends State<InGroupChatScreen> {
   final TextEditingController _messageController = TextEditingController();
-  List<Map<String, String>> _messages = []; // Store messages here
+  final List<Map<String, String>> _messages = [];
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+  late String _usernameSender = 'Unknown';
 
-  // Fetch the messages from the API
+  @override
+  void initState() {
+    super.initState();
+    _initializeSender();
+    _fetchMessages();
+  }
+
+  Future<void> _initializeSender() async {
+    final username = await _storage.read(key: 'username');
+    setState(() {
+      _usernameSender = username ?? 'Unknown';
+    });
+  }
+
   Future<void> _fetchMessages() async {
-    final response = await http.get(
-      Uri.parse(AppConstants.message + widget.groupName),
-    );
-
-    print('Response body: ${response.body}');
+    final response = await http.get(Uri.parse(AppConstants.message + widget.groupName));
 
     if (response.statusCode == 200) {
-      final Map<String, dynamic> data = json.decode(response.body);
-      final List<dynamic> messagesData = data['data'] as List<dynamic>;
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final messagesData = data['data'] as List<dynamic>;
 
       setState(() {
-        _messages = messagesData.map((message) {
+        _messages.clear();
+        _messages.addAll(messagesData.map((message) {
           final sender = message['senderId']?.toString() ?? 'Unknown';
           final text = message['text']?.toString() ?? 'No message';
           final timestamp = message['timestamp'] as int?;
 
           String formattedTime = 'Unknown time';
           if (timestamp != null) {
-            final DateTime time =
-            DateTime.fromMillisecondsSinceEpoch(timestamp);
+            final time = DateTime.fromMillisecondsSinceEpoch(timestamp);
             formattedTime = DateFormat('HH:mm').format(time);
           }
 
@@ -49,36 +61,28 @@ class _InGroupChatScreenState extends State<InGroupChatScreen> {
             'text': text,
             'time': formattedTime,
           };
-        }).toList();
+        }).toList());
       });
     } else {
       print('Failed to load messages. Status code: ${response.statusCode}');
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchMessages(); // Fetch messages when the screen is initialized
-  }
-
   void _sendMessage() async {
     if (_messageController.text.isNotEmpty) {
-      final String messageText = _messageController.text;
+      final messageText = _messageController.text;
 
-      // Clear the input field and update local messages list
       setState(() {
         _messages.add({
-          'sender': 'You',
+          'sender': _usernameSender,
           'text': messageText,
           'time': TimeOfDay.now().format(context),
         });
         _messageController.clear();
       });
 
-      // Prepare the payload for the API
-      final Map<String, dynamic> payload = {
-        'senderId': 'You', // Replace with actual senderId if available
+      final payload = {
+        'senderId': _usernameSender,
         'text': messageText,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       };
@@ -90,9 +94,7 @@ class _InGroupChatScreenState extends State<InGroupChatScreen> {
           body: json.encode(payload),
         );
 
-        if (response.statusCode == 200) {
-          print('Message sent successfully');
-        } else {
+        if (response.statusCode != 200) {
           print('Failed to send message. Status code: ${response.statusCode}');
         }
       } catch (e) {
@@ -101,12 +103,12 @@ class _InGroupChatScreenState extends State<InGroupChatScreen> {
     }
   }
 
-  void _showLeaveGroupDialog() {
+  void _showDialog(String title, String content, VoidCallback onConfirm) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Leave Group'),
-        content: const Text('Are you sure you want to leave this group?'),
+        title: Text(title),
+        content: Text(content),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -115,33 +117,9 @@ class _InGroupChatScreenState extends State<InGroupChatScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.pop(context);
+              onConfirm();
             },
-            child: const Text('Leave'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteGroupDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Group'),
-        content: const Text(
-            'Are you sure you want to delete this group? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('Delete'),
+            child: const Text('Confirm'),
           ),
         ],
       ),
@@ -180,35 +158,25 @@ class _InGroupChatScreenState extends State<InGroupChatScreen> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.black),
             onSelected: (value) {
-              switch (value) {
-                case 'Group Settings':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => GroupSettings(groupId: widget.groupId)),
-
-                  );
-                  break;
-                case 'leave_group':
-                  _showLeaveGroupDialog();
-                  break;
-                case 'delete_group':
-                  _showDeleteGroupDialog();
-                  break;
+              if (value == 'Group Settings') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => GroupSettings(groupId: widget.groupId)),
+                );
+              } else if (value == 'leave_group') {
+                _showDialog('Leave Group', 'Are you sure you want to leave this group?', () {
+                  Navigator.pop(context);
+                });
+              } else if (value == 'delete_group') {
+                _showDialog('Delete Group', 'This action cannot be undone. Proceed?', () {
+                  Navigator.pop(context);
+                });
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'Group Settings',
-                child: Text('Group Settings'),
-              ),
-              const PopupMenuItem(
-                value: 'leave_group',
-                child: Text('Leave Group'),
-              ),
-              const PopupMenuItem(
-                value: 'delete_group',
-                child: Text('Delete Group'),
-              ),
+              const PopupMenuItem(value: 'Group Settings', child: Text('Group Settings')),
+              const PopupMenuItem(value: 'leave_group', child: Text('Leave Group')),
+              const PopupMenuItem(value: 'delete_group', child: Text('Delete Group')),
             ],
           ),
         ],
@@ -221,24 +189,19 @@ class _InGroupChatScreenState extends State<InGroupChatScreen> {
               child: ListView.builder(
                 itemCount: _messages.length,
                 reverse: true,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 itemBuilder: (context, index) {
                   final message = _messages[_messages.length - 1 - index];
-                  final isMe = message['sender'] == 'You';
+                  final isMe = message['sender'] == _usernameSender;
 
                   return Align(
-                    alignment:
-                    isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       padding: const EdgeInsets.all(12),
-                      constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width * 0.7),
+                      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
                       decoration: BoxDecoration(
-                        color: isMe
-                            ? const Color.fromARGB(255, 255, 255, 255)
-                            : Colors.white,
+                        color: isMe ? Colors.lightBlue[100] : Colors.white,
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(isMe ? 12 : 0),
                           topRight: Radius.circular(isMe ? 0 : 12),
@@ -247,17 +210,12 @@ class _InGroupChatScreenState extends State<InGroupChatScreen> {
                         ),
                       ),
                       child: Column(
-                        crossAxisAlignment: isMe
-                            ? CrossAxisAlignment.end
-                            : CrossAxisAlignment.start,
+                        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                         children: [
                           if (!isMe)
                             Text(
                               message['sender']!,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                             ),
                           Text(
                             message['text']!,
@@ -265,8 +223,7 @@ class _InGroupChatScreenState extends State<InGroupChatScreen> {
                           ),
                           Text(
                             message['time']!,
-                            style: const TextStyle(
-                                fontSize: 10, color: Colors.grey),
+                            style: const TextStyle(fontSize: 10, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -277,8 +234,7 @@ class _InGroupChatScreenState extends State<InGroupChatScreen> {
             ),
             Container(
               color: Colors.white,
-              padding:
-              const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               child: Row(
                 children: [
                   Expanded(
@@ -304,8 +260,7 @@ class _InGroupChatScreenState extends State<InGroupChatScreen> {
                         color: Color(0xFF2C3E50),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.send,
-                          color: Colors.white, size: 20),
+                      child: const Icon(Icons.send, color: Colors.white, size: 20),
                     ),
                   ),
                 ],

@@ -33,24 +33,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUserData() async {
     try {
-      final userDataJson = await _storage.read(key: 'user_data');
-      if (userDataJson != null) {
-        final userData = jsonDecode(userDataJson);
-        setState(() {
-          name = userData['username'] ?? 'Unknown';
-          email = userData['email'] ?? 'Unknown';
-          role = userData['tipe_user'] ?? 'Unknown';
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          name = 'Unknown';
-          email = 'Unknown';
-          role = 'Unknown';
-          isLoading = false;
-        });
-      }
+      final username = await _storage.read(key: 'username');
+      final email = await _storage.read(key: 'email');
+      final tipeUser = await _storage.read(key: 'tipe_user');
+
+      // Debug log
+      print("userDataJson: $username");
+
+      setState(() {
+        name = username ?? 'Unknown';
+        this.email = email ?? 'Unknown'; // Hindari konflik nama variabel
+        role = tipeUser ?? 'Unknown';
+        isLoading = false;
+      });
     } catch (e) {
+      // Log error jika perlu
+      print("Error loading user data: $e");
+
       setState(() {
         name = 'Error';
         email = 'Error';

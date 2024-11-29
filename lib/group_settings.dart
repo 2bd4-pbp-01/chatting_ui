@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'services/group_services.dart'; // Updated import
 
 class GroupSettings extends StatefulWidget {
-  const GroupSettings({super.key});
+  final int groupId;
+
+  const GroupSettings({super.key, required this.groupId});
 
   @override
   State<GroupSettings> createState() => _GroupSettingsState();
@@ -11,21 +16,53 @@ class _GroupSettingsState extends State<GroupSettings> {
   bool _isInvitePopupVisible = false;
   bool _isKickMode = false;
   TextEditingController _searchController = TextEditingController();
-  List<String> _companyMembers = List.generate(20, (index) => 'Company Member ${index + 1}');
-  List<String> _filteredCompanyMembers = [];
-  List<String> _selectedMembers = [];
-
+  List<Map<String, dynamic>> _groupMembers = [];
+  List<Map<String, dynamic>> _companyMembers = [];
+  List<Map<String, dynamic>> _filteredCompanyMembers = [];
+  List<Map<String, dynamic>> _selectedMembers = [];
+  String _groupName = '';
+  String token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTIsImVtYWlsIjoibWFuYWdlckBnbWFpbC5jb20iLCJ0aXBlX3VzZXIiOiJtYW5hZ2VyIiwiaWF0IjoxNzMyODAyNDIyLCJleHAiOjE3MzI4ODg4MjJ9.zJaTDNAypqnoSBjfsQ18kQnbYc1mN98C12CaASJ6gBE';
+  String tokenop = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MywiZW1haWwiOiJuZW9uZXR6QGdtYWlsLmNvbSIsInRpcGVfdXNlciI6Im9wZXJhdG9yIiwiaWF0IjoxNzMyODAyNDcwLCJleHAiOjE3MzI4ODg4NzB9.xPmOMNQXYZvERiTDrZfZpfjxmW8sCbcRp3S6YeY3jg4';
   @override
   void initState() {
     super.initState();
-    _filteredCompanyMembers = _companyMembers;
+    _fetchGroupDetails();
+    _fetchCompanyMembers();
     _searchController.addListener(_filterMembers);
+  }
+
+  Future<void> _fetchGroupDetails() async {
+    final data = await GroupServices.fetchGroupDetails(widget.groupId);
+    if (data != null) {
+      setState(() {
+        _groupName = data['name'];
+        _groupMembers = List<Map<String, dynamic>>.from(data['users']);
+      });
+    } else {
+      print('Failed to load group details');
+    }
+  }
+
+  Future<void> _fetchCompanyMembers() async {
+    final data = await GroupServices.fetchCompanyMembers();
+    if (data != null) {
+      setState(() {
+        _companyMembers = List<Map<String, dynamic>>.from(data['data']);
+        _filterMembers();
+      });
+    } else {
+      print('Failed to load company members');
+    }
   }
 
   void _filterMembers() {
     setState(() {
       _filteredCompanyMembers = _companyMembers
-          .where((member) => member.toLowerCase().contains(_searchController.text.toLowerCase()))
+          .where((member) =>
+              !_groupMembers.any((groupMember) => groupMember['id_users'] == member['id_users']) &&
+              member['username']
+                  .toLowerCase()
+                  .contains(_searchController.text.toLowerCase()))
           .toList();
     });
   }
@@ -42,7 +79,7 @@ class _GroupSettingsState extends State<GroupSettings> {
     });
   }
 
-  void _toggleMemberSelection(String member) {
+  void _toggleMemberSelection(Map<String, dynamic> member) {
     setState(() {
       if (_selectedMembers.contains(member)) {
         _selectedMembers.remove(member);
@@ -58,22 +95,40 @@ class _GroupSettingsState extends State<GroupSettings> {
     });
   }
 
-  void _kickSelectedMembers() {
+  Future<void> _kickSelectedMembers() async {
+    for (var member in _selectedMembers) {
+      final success = await GroupServices.kickMember(widget.groupId, member['id_users']);
+      if (success) {
+        setState(() {
+          _groupMembers.remove(member);
+        });
+      } else {
+        print('Failed to kick member: ${member['username']}');
+      }
+    }
+    _filterMembers();
     setState(() {
-      _companyMembers.removeWhere((member) => _selectedMembers.contains(member));
-      _filteredCompanyMembers = _companyMembers;
       _selectedMembers.clear();
       _isKickMode = false;
     });
   }
 
-  void _inviteSelectedMembers() {
+  Future<void> _inviteSelectedMembers() async {
+    for (var member in _selectedMembers) {
+      final success = await GroupServices.inviteMember(widget.groupId, member['id_users']);
+      if (success) {
+        setState(() {
+          _groupMembers.add(member);
+        });
+      } else {
+        print('Failed to invite member: ${member['username']}');
+      }
+    }
+    _filterMembers();
     setState(() {
-      _companyMembers.addAll(_selectedMembers);
-      _filteredCompanyMembers = _companyMembers;
-      _selectedMembers.clear();
-      _hideInvitePopup();
+    _selectedMembers.clear();
     });
+    _hideInvitePopup();
   }
 
   void _showKickConfirmationDialog() {
@@ -223,7 +278,7 @@ class _GroupSettingsState extends State<GroupSettings> {
                 ),
                 SizedBox(height: 10),
                 Text(
-                  'Project CorpaChat',
+                  _groupName,
                   style: TextStyle(
                     fontSize: 22,
                   ),
@@ -262,9 +317,9 @@ class _GroupSettingsState extends State<GroupSettings> {
                       SizedBox(height: 10),
                       Expanded(
                         child: ListView.builder(
-                          itemCount: 20, // Replace with the actual number of group members
+                          itemCount: _groupMembers.length, // Replace with the actual number of group members
                           itemBuilder: (context, index) {
-                            final member = 'Employee Freakbob ${index + 1}';
+                            final member = _groupMembers[index];
                             final isSelected = _selectedMembers.contains(member);
                             return ListTile(
                               leading: CircleAvatar(
@@ -275,7 +330,7 @@ class _GroupSettingsState extends State<GroupSettings> {
                                 ),
                               ),
                               title: Text(
-                                member,
+                                member['username'],
                                 style: TextStyle(
                                   color: isSelected ? Colors.grey : Colors.black,
                                 ),
@@ -321,13 +376,18 @@ class _GroupSettingsState extends State<GroupSettings> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            onPressed: _isKickMode ? _showKickConfirmationDialog : _toggleKickMode,
+                            onPressed: _isKickMode
+                                ? (_selectedMembers.isEmpty ? _toggleKickMode : _showKickConfirmationDialog)
+                                : _toggleKickMode,
                             child: Row(
                               children: [
-                                Icon(Icons.cancel, color: Colors.red),
+                                Icon(
+                                  _isKickMode && _selectedMembers.isEmpty ? Icons.cancel : Icons.cancel,
+                                  color: _isKickMode && _selectedMembers.isEmpty ? Colors.red : Colors.red,
+                                ),
                                 SizedBox(width: 8),
                                 Text(
-                                  _isKickMode ? 'Confirm Kick' : 'Kick Member',
+                                  _isKickMode && _selectedMembers.isEmpty ? 'Cancel' : _isKickMode ? 'Confirm Kick' : 'Kick Member',
                                   style: TextStyle(color: Colors.white),
                                 ),
                                 SizedBox(width: 6),
@@ -406,7 +466,7 @@ class _GroupSettingsState extends State<GroupSettings> {
                                   ),
                                 ),
                                 title: Text(
-                                  member,
+                                  member['username'],
                                   style: TextStyle(
                                     color: isSelected ? Colors.grey : Colors.black,
                                   ),
